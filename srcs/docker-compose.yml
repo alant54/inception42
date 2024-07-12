@@ -1,0 +1,127 @@
+services:
+  nginx:
+    container_name: nginx
+    build: ./requirements/nginx/.
+    image: nginx:custom
+    networks:
+      - inception
+    ports:
+      - "443:443"
+    volumes:
+      - wordpress:/var/www/html
+    env_file:
+      - .env
+    restart: on-failure
+
+  mariadb:
+    container_name: mariadb
+    build: ./requirements/mariadb/.
+    image: mariadb:custom
+    networks:
+      - inception
+    volumes:
+      - mariadb:/var/lib/mysql
+    env_file:
+      - .env
+    restart: always
+
+  wordpress:
+    container_name: wordpress
+    build: ./requirements/wordpress/.
+    image: wordpress:custom
+    networks:
+      - inception
+    depends_on:
+      - mariadb
+    volumes:
+      - wordpress:/var/www/html
+    env_file:
+      - .env
+    restart: on-failure
+
+  redis:
+    container_name: redis
+    build: ./requirements/bonus/redis/.
+    image: redis:custom
+    networks:
+      - inception
+    depends_on:
+      - wordpress
+    volumes:
+      - wordpress:/var/www/html
+    env_file:
+      - .env
+    restart: on-failure
+  
+  ftp:
+    container_name: ftp
+    build: ./requirements/bonus/ftp/.
+    image: ftp:custom
+    networks:
+      - inception
+    depends_on:
+      - wordpress
+    volumes:
+      - wordpress:/mnt/ftp
+    env_file:
+      - .env
+    ports:
+      - "21:21"
+      - "20:20"
+      - "40000-40005:40000-40005"
+    restart: on-failure
+
+  adminer:
+    container_name: adminer
+    build: ./requirements/bonus/adminer/.
+    image: adminer:custom
+    networks:
+      - inception
+    depends_on:
+      - wordpress
+    volumes:
+      - wordpress:/var/www/html
+    env_file:
+      - .env
+    restart: on-failure
+
+  borg:
+    container_name: borg
+    build: ./requirements/bonus/borg/.
+    image: borg:custom
+    networks:
+      - inception
+    volumes:
+      - backup:/mnt/backup
+      - wordpress:/mnt/wordpress
+      - mariadb:/mnt/mariadb
+    env_file:
+      - .env
+    restart: on-failure
+
+networks:
+  inception:
+    name: inception
+
+volumes:
+  wordpress:
+    name: wordpress
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/luka/Desktop/inception/data/wordpress
+  mariadb:
+    name: mariadb
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/luka/Desktop/inception/data/mariadb
+  backup:
+    name: backup
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/luka/Desktop/inception/data/backup
